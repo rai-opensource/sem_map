@@ -1,0 +1,31 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+
+# Default colcon arguments, applied via COLCON_DEFAULTS_FILE (exported by
+# scripts/setup_env.sh).
+#
+# These are the settings the package needs, so that `colcon build` on its own is
+# the right command. Without them colcon would default to an empty
+# CMAKE_BUILD_TYPE — an unoptimised binary, which costs a large factor of
+# runtime performance in a real-time perception node — and to an isolated
+# install layout that does not match what the launch files expect.
+#
+# Paths are left at their defaults (relative to the working directory), so run
+# colcon from the repository root.
+
+build:
+  # One merged install/ tree rather than one prefix per package.
+  merge-install: true
+  # Symlink Python sources and configs into install/ so edits take effect
+  # without rebuilding.
+  symlink-install: true
+  # Optimised build. This is the setting that matters most for frame rate.
+  cmake-args:
+    - -DCMAKE_BUILD_TYPE=Release
+  # Desktop notifications are noise in a container.
+  event-handlers:
+    - desktop_notification-
+
+test:
+  merge-install: true
+  event-handlers:
+    - desktop_notification-

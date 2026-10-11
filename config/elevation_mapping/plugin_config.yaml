@@ -1,0 +1,46 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# Copyright (c) 2024-2025 Boston Dynamics AI Institute LLC. All rights reserved.
+# Adapted from elevation_mapping_cupy (MIT), see NOTICE.
+# Settings of the plugins. (The plugins should be stored in script/plugins)
+# min_filter fills in minimum value around the invalid cell.
+min_filter:
+  enable: True                                # weather to load this plugin
+  fill_nan: False                             # Fill nans to invalid cells of elevation layer.
+  is_height_layer: True                       # If this is a height layer (such as elevation) or not (such as traversability)
+  layer_name: "min_filter"                    # The layer name.
+  extra_params:                               # This params are passed to the plugin class on initialization.
+    dilation_size: 1                          # The patch size to apply
+    iteration_n: 30                           # The number of iterations
+
+# Apply smoothing.
+smooth_filter:
+  enable: True
+  fill_nan: False
+  is_height_layer: True
+  layer_name: "smooth"
+  extra_params:
+    input_layer_name: "min_filter"
+    filter_type: "uniform"
+
+# Apply inpainting using opencv (geometry only).
+inpainting:
+  enable: False
+  fill_nan: False
+  is_height_layer: True
+  layer_name: "elevation_inpaint"
+  extra_params:
+    method: "telea"                           # telea or ns
+
+# Joint geometric + semantic inpainting (alternative to geometry-only inpainting above).
+# Only cells observed by BOTH LiDAR and camera are used as source.
+# Produces an inpainted elevation layer and inpaints semantic layers in-place.
+joint_inpainting:
+  enable: True
+  fill_nan: False
+  is_height_layer: True
+  layer_name: "elevation_inpaint"
+  extra_params:
+    semantic_classes: [".*"]
+    method: "telea"                            # telea or ns
+    inpaint_radius: 3                          # radius of circular neighbourhood (grid cells)
+    mask_dilation: 0                           # dilate inpaint mask by N cells to skip thin unreliable borders

@@ -1,0 +1,51 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# GrandTour dataset (ETH Zurich) — camera-only replay example.
+#
+# Used by docs/GRANDTOUR.md to reproduce the semantic pipeline on public data.
+# Only the ZED2i left camera is consumed: no pose or pointcloud, so the height
+# map and BEV fusion are off and the node publishes perspective outputs only
+# (/sem_map/segmentation, /sem_map/traversability, /sem_map/confidence).
+#
+# To also build the 2.5D BEV map, set pose_topic/pointcloud_topic and the
+# frames below, then flip enable_height_map and enable_bev_fusion to true.
+/**:
+  ros__parameters:
+    # Topics
+    pose_topic: ""
+    pointcloud_topic: ""
+    image_topic: "/boxi/zed2i/left/image_raw/compressed"
+    image_is_compressed: true
+    camera_info_topic: "/boxi/zed2i/left/camera_info"
+
+    # Frames (unused while the height map is disabled)
+    pose_frame: ""
+    world_frame: ""
+    base_frame: ""
+
+    # Image dimensions (must match camera output)
+    image_height: 1080
+    image_width: 1920
+    flip_image: false
+
+    enable_height_map: false
+    enable_inpaint: false
+    confidence_fusion_threshold: 0.00  # Only fuse pixels with confidence >= this value (0.0-1.0). 0.0 = no filtering, 1.0 = only perfect confidence
+
+    # Semantic pipeline. snow_v1 is the probe trained on the GrandTour SNOW-2
+    # mission (see docs/GRANDTOUR.md); bilinear keeps the demo dependency-free.
+    # For sharper boundaries: upsampler_type "jafar_partial" with factor 4.
+    backbone_name: "dinov3s"
+    upsampler_type: "bilinear"
+    upsample_partial_factor: 4
+    seg_layer: "dinov3s_sem_seg_snow_v1"
+    traversability_temperature: 0.2
+
+    # Buffer sizes
+    rgb_buffer_size: 2 # if the pose is lagged, increate the rgb buffer size
+    pointcloud_buffer_size: 2 # if the pose is lagged, increate the pointcloud buffer size
+    pose_buffer_size: 1000 # rule of thumb: acculate upto 1 second of poses - 1000 Hz = 1000 poses
+
+    # Processing rates
+    pointcloud_processing_rate_hz: 30.0 # the rate at which the pointcloud is processed and elevation worker is processing
+    rgb_processing_rate_hz: 15.0 # the rate at which the rgb images are processed and semantic worker is processing
+    ros_publish_rate_hz: 15.0

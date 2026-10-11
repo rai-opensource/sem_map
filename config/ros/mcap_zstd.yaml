@@ -1,0 +1,6 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# rosbag2 mcap storage options for `ros2 bag record --storage-config-file`.
+# Per-chunk zstd: the sem_map image outputs compress ~4x, and Foxglove reads
+# chunk compression natively (rosbag2's --compression-mode wraps whole files).
+compression: "Zstd"
+compressionLevel: "Default"

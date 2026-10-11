@@ -1,0 +1,57 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# Topics recorded by scripts/ros/record_sem_map.sh.
+#
+# This is a deliberately generic starting point: it covers the sem_map outputs,
+# the elevation/grid map, TF and a ZED-style camera. Anything specific to your
+# robot has to be added by you.
+#
+# In particular, add the topics you configured in config/sem_map.yaml (or your
+# own config/robots/<robot>.yaml):
+#   - pose_topic        your odometry / pose source
+#                       (e.g. /<your_odometry_node>/pose or an Odometry topic)
+#   - pointcloud_topic  your LiDAR or depth cloud
+#                       (e.g. /<your_lidar>/points), only needed when
+#                       enable_height_map is true
+#   - image_topic / camera_info_topic  if your camera is not a ZED
+#
+# Recording a topic that nobody publishes is harmless - `ros2 bag record` simply
+# waits for it - so it is safe to leave entries in that your setup does not use.
+
+topics:
+  # ── sem_map outputs ──────────────────────────────────────────────────
+  # Published by the C++ node (the default launch path) and/or the Python node
+  # (sem_map_py.launch.py); the union is listed here.
+  - /sem_map/grid_map        # grid_map_msgs/GridMap: fused semantic + elevation
+  - /sem_map/traversability  # sensor_msgs/Image: per-pixel traversability
+  - /sem_map/segmentation    # sensor_msgs/Image: class IDs           (C++ node)
+  - /sem_map/confidence      # sensor_msgs/Image: mono16 confidence   (C++ node)
+  - /sem_map/stats           # diagnostic_msgs/DiagnosticArray: timings (C++ node)
+  - /sem_map/trav_map        # sensor_msgs/Image: semantic layer of the BEV map (Python node)
+  - /sem_map/map_center      # geometry_msgs/PoseStamped: map origin
+  - /sem_map/pointcloud      # sensor_msgs/PointCloud2: transformed input cloud (Python node)
+
+  # ── Elevation / grid maps ────────────────────────────────────────────
+  - /elevation_map
+
+  # ── Camera images (ZED-style; rename for your camera) ────────────────
+  - /zed/zed_node/rgb/color/rect/image
+  - /zed/zed_node/left/color/rect/image
+  - /zed/zed_node/left/color/rect/image/compressed
+  - /zed/zed_node/left/image_rect_color/compressed
+
+  # ── Camera info ──────────────────────────────────────────────────────
+  - /zed/zed_node/rgb/color/rect/image/camera_info
+  - /zed/zed_node/left/color/rect/image/camera_info
+  - /zed/zed_node/left/camera_info
+
+  # ── Pose / odometry (ZED VIO; add your own odometry topic here) ──────
+  - /zed/zed_node/pose
+
+  # ── Point cloud (add your LiDAR topic here) ──────────────────────────
+  - /zed/zed_node/point_cloud/cloud_registered
+
+  # ── TF / time ────────────────────────────────────────────────────────
+  - /tf
+  - /tf_static
+  - /clock
+  - /robot_description

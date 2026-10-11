@@ -1,0 +1,29 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+
+version: 2
+updates:
+  # Monitor GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Monitor Python dependencies declared in pyproject.toml.
+  #
+  # Note: docker/requirements/*.txt is deliberately NOT monitored. Those files
+  # pin a CUDA-specific stack (torch, cupy, onnxruntime-gpu, natten) served from
+  # NVIDIA and Jetson package indexes, and TensorRT is pinned to 10.7 because
+  # TensorRT 11 removed builder flags this code depends on. Bumping them needs a
+  # hardware test, not an automated PR.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "python"

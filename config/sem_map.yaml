@@ -1,0 +1,79 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# Default parameters. Robot-specific overrides live in config/robots/*.yaml and
+# are selected at launch with robot:=<name>; anything set there wins over this
+# file. The defaults below assume a ZED camera and its built-in odometry, which
+# is the simplest setup to reproduce — override the topics/frames for your rig.
+/**:
+  ros__parameters:
+    # Topics
+    pose_topic: "/zed/zed_node/pose" # odometry/pose source, e.g. a LiDAR-inertial odometry topic
+    pose_is_odometry: false # true if pose_topic is nav_msgs/Odometry rather than PoseStamped
+    pointcloud_topic: "/zed/zed_node/point_cloud/cloud_registered" # LiDAR or depth cloud; only used when enable_height_map is true
+    image_topic: "/zed/zed_node/rgb/color/rect/image" # rectified RGB; add /compressed and set image_is_compressed for bandwidth
+    image_is_compressed: false # Set to true if using compressed image topic
+    camera_info_topic: "/zed/zed_node/rgb/color/rect/image/camera_info" # intrinsics matching image_topic
+
+    # Frames
+    pose_frame: "zed_camera_link" # the frame that the pose topic reports
+    world_frame: "world" # the static world frame (should be gravity aligned), should be the same as the frame that the pose topic reports, map, world, lidar_odometry
+    base_frame: "base_link" # the base frame of the robot
+
+    # Buffer sizes
+    rgb_buffer_size: 2 # if the pose is lagged, increate the rgb buffer size
+    pointcloud_buffer_size: 2 # if the pose is lagged, increate the pointcloud buffer size
+    pose_buffer_size: 1000 # rule of thumb: acculate upto 1 second of poses - 1000 Hz = 1000 poses
+
+    # Processing rates
+    pointcloud_processing_rate_hz: 30.0 # the rate at which the pointcloud is processed and elevation worker is processing
+    rgb_processing_rate_hz: 30.0 # the rate at which the rgb images are processed and semantic worker is processing
+    ros_publish_rate_hz: 30.0
+
+    # Semantic pipeline
+    backbone_name: "dinov3s"
+    # bilinear needs no upsampler model and is the cheapest option. For sharper
+    # class boundaries use "jafar_partial" (or "jafar_full") — that requires the
+    # matching dinov3s_jafar_x<factor> engine to be present in artifacts/.
+    upsampler_type: "bilinear"
+    upsample_partial_factor: 4
+    seg_layer: "dinov3s_sem_seg_trail_v4"
+    enable_semantic_pipeline: true
+    publish_traversability: true
+    publish_segmentation: true
+    publish_confidence: true  # Publish confidence map as mono16 (requires new architecture with reconstruction)
+    publish_custom_elevation: false  # color_r mode only: publish constant value as "elevation", real data as "elevation_real"
+    custom_elevation: 0.0            # constant elevation value used when publish_custom_elevation is true
+    enable_pca: false
+    traversability_temperature: 0.2
+    semantic_bev_layer_name: "sem"
+    flip_image: false  # Flip RGB images and outputs vertically before processing
+
+
+    # Multiprocessing
+    use_multiprocessing: true   # Enable multiprocessing mode (separate processes for semantic/elevation)
+    image_height: 320           # RGB image height (MUST match actual camera output!)
+    image_width: 512            # RGB image width (MUST match actual camera output!)
+    trav_height: 320            # Traversability output height (model latent resolution)
+    trav_width: 512             # Traversability output width (model latent resolution)
+    pc_max_points: 100000       # Maximum pointcloud size (for buffer pre-allocation)
+    buffer_size: 5             # CUDA IPC buffer size (circular, keeps newest data)
+
+    # Elevation mapping
+    enable_height_map: true   # Enable pointcloud processing and elevation map (requires LiDAR/depth sensor)
+    enable_bev_fusion: true   # Fuse camera traversability into elevation map (requires enable_height_map=true)
+    enable_inpaint: false   # Use inpainted elevation layer (elevation_inpaint) instead of raw elevation layer
+
+    # Map parameters
+    map_size: 20.0
+    resolution: 0.25
+    backend: "cupy"
+    precision: "float16"
+    map_move_threshold_m: 0.1  # Only shift map when robot moves > this distance from center (meters)
+    #### Confidence-based fusion ########
+    confidence_fusion_threshold: 0.0  # Only fuse pixels with confidence >= this value (0.0-1.0). 0.0 = no filtering, 1.0 = only perfect confidence. Gate for 'exponential' fusion and the _sem_observed inpainting trust stamp
+    semantic_fusion_method: "exponential"  # BEV image fusion: 'exponential' (fixed alpha 0.7, hard confidence gate) or 'confidence_weighted' (per-cell evidence weight: alpha_eff = conf/(conf+w), no threshold cliff, confident history resists weak updates)
+    conf_floor: 0.2        # confidence_weighted only: skip pixels below this confidence entirely
+    conf_weight_cap: 4.0   # confidence_weighted only: max accumulated weight (rate-independent plasticity floor; ~N frames for confident new data to win after a scene change)
+    semantic_fusion_range_m: 0.0  # confidence_weighted only: distance falloff (inverse-variance, error std ~ d^2), evidence scaled by 1/(1+(d/range)^4) — ~flat inside 0.55*range, 50% at range, ~6% at 2x. 0 = auto (map_size/4), negative = disabled
+
+    # TF parameters
+    tf_lookup_timeout_sec: 0.5  # TF transform lookup timeout in seconds

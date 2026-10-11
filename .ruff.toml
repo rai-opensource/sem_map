@@ -1,0 +1,56 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+
+# Ruff configuration
+#
+# This is research code released for reproducibility, so the linter is scoped to
+# rules that catch genuine defects rather than style preferences. Concretely we
+# run the classic "critical errors only" set: syntax errors (E9), broken
+# comparisons (F63), misuse of statements such as f-strings and asserts (F7),
+# and undefined or misused names (F82). That set found three real
+# undefined-name bugs when it was introduced.
+#
+# Rules deliberately NOT enabled, and why:
+#
+#   F401 (unused import)  - would delete imports kept for their side effects
+#                           (pycuda.autoinit initialising CUDA) and the
+#                           re-exports in perception/__init__.py that form the
+#                           package's public API.
+#   I    (import sorting) - several modules must manipulate sys.path before
+#                           importing sem_map; hoisting imports would break them.
+#   E402                  - same reason: imports after sys.path setup are
+#                           intentional here.
+#   E501, E7, UP, B, C4, SIM - style and modernisation opinions. Applying them
+#                           to already-published code would produce a large diff
+#                           for no correctness gain.
+#
+# New code is welcome to be stricter; run `ruff check --select ALL` locally to
+# see what else could be tightened.
+line-length = 100
+src = ["scripts/"]
+target-version = "py310"
+
+[lint]
+select = [
+    "E9",  # syntax / IO errors
+    "F63", # invalid comparisons
+    "F7",  # misplaced statements, break/return outside a loop or function
+    "F82", # undefined names
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "install",
+    "log",
+    "dist",
+    "*.egg-info",
+    # Vendored dataset and bag helpers, kept close to their upstream form.
+    "tools",
+]

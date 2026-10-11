@@ -1,0 +1,70 @@
+SemMap
+Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute
+
+This product includes software developed by third parties, listed below. The
+licence texts referenced here are included in licenses/.
+
+--------------------------------------------------------------------------------
+
+JAFAR — https://github.com/PaulCouairon/JAFAR
+Licensed under the Apache License, Version 2.0.
+
+The following are copied from JAFAR, unmodified except for formatting:
+
+  scripts/sem_map/perception/visualization.py
+      pca()
+      TorchPCA
+      UnNormalize
+
+The following is derived from JAFAR, with modifications:
+
+  scripts/sem_map/perception/models/segmentation.py
+      ResBlock — the shortcut projection is initialised to None and is applied
+      when the residual and output shapes differ, rather than only when the
+      channel counts differ. JAFAR credits magvit1 for the original design.
+
+--------------------------------------------------------------------------------
+
+rmw_zenoh — https://github.com/ros2/rmw_zenoh
+Licensed under the Apache License, Version 2.0.
+
+The following is derived from rmw_zenoh's DEFAULT_RMW_ZENOH_SESSION_CONFIG.json5,
+with modifications:
+
+  scripts/config/zenoh-session-config.json5.jinja2 — converted into a Jinja2
+      template so the router endpoint can be substituted at runtime; unused
+      sections removed.
+
+--------------------------------------------------------------------------------
+
+elevation_mapping_cupy — https://github.com/leggedrobotics/elevation_mapping_cupy
+Copyright (c) 2022 ETH Zurich, Takahiro Miki.
+Licensed under the MIT License; the text is included at
+licenses/MIT-elevation_mapping_cupy.txt.
+
+The following are adapted from its config/core/, keeping upstream's structure
+and comments:
+
+  config/elevation_mapping/plugin_config.yaml — adds a joint geometric and
+      semantic inpainting plugin, and disables the geometry-only inpainting it
+      replaces.
+  config/elevation_mapping/core_param.yaml — retuned for this robot and its
+      sensors.
+
+--------------------------------------------------------------------------------
+
+Everything else in this repository is original work by the copyright holder
+above and is released under the RAI Institute Research License, for
+non-commercial research use only; see LICENSE.
+
+Third-party libraries that SemMap builds or runs against — ROS 2, grid_map,
+Sophus, pybind11, OpenCV, PyTorch, ONNX Runtime, TensorRT, CUDA and
+elevation_mapping_cupy_core among them — are not redistributed here (its
+configuration files aside, listed above). They are
+installed from their own sources when the container image is built, and remain
+under their own licences.
+
+The model files SemMap downloads at runtime are not covered by the RAI
+Institute Research License either. The DINOv3 backbone and the decoders trained on it fall under the DINOv3
+License (MODEL_LICENSES/DINOv3_LICENSE.md); the JAFAR upsampler models are
+Apache-2.0.

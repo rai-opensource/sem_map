@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!-- Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved. -->
+<package format="3">
+  <name>sem_map</name>
+  <version>0.1.0</version>
+  <description>
+    Real-time semantic mapping for mobile robots: perspective traversability
+    images and 2.5D BEV semantic maps from DINOv3 features with lightweight
+    linear probes.
+  </description>
+  <maintainer email="dishtaweera@rai-inst.com">Deepana Ishtaweera</maintainer>
+  <license file="LICENSE">RAI Institute Research License</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>grid_map_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_sensor_msgs</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>pybind11_vendor</depend>
+  <depend>libopencv-dev</depend>
+  <depend>sophus</depend>
+
+  <!--
+    Python runtime dependencies are installed from docker/requirements/ rather
+    than rosdep: they pin CUDA-specific builds (torch, cupy, onnxruntime-gpu,
+    tensorrt, pycuda, cuda-python) that differ between x86 and Jetson.
+    elevation_mapping_cupy_core is installed by docker/setup/install-elevation-mapping.sh
+    and is required for the height-map / BEV fusion path.
+  -->
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>ros2bag</exec_depend>
+  <exec_depend>rosbag2_storage_mcap</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,22 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+name: "Coarse 3 Classes"
+num_classes: 3
+categories:
+  - id: 0
+    name: "background"
+    concept: ""
+    isthing: false
+    color: [180, 180, 190]
+    traversability: 0.0
+  - id: 1
+    name: "floor_trav"
+    concept: "snowy floor"
+    isthing: false
+    color: [144, 238, 144]
+    traversability: 1.0
+  - id: 2
+    name: "floor_nontrav"
+    concept: "fence"
+    isthing: false
+    color: [255, 150, 150]
+    traversability: 0.2

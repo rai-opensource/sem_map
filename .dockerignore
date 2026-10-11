@@ -1,0 +1,31 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# The image build only needs docker/ (setup scripts + requirements) and
+# package.xml (for rosdep). The repository itself is bind-mounted at runtime by
+# docker-compose.yaml, so keeping the build context small makes builds fast and
+# stops multi-GB directories from being sent to the daemon.
+artifacts/
+data/
+recordings/
+outputs/
+external/
+build/
+install/
+log/
+
+*.mcap
+*.db3
+*.bag
+*.svo2
+*.onnx
+*.onnx.data
+*.plan
+*.pth
+
+.git/
+.github/
+__pycache__/
+*.pyc
+.venv/
+.vscode/
+.idea/
+images/

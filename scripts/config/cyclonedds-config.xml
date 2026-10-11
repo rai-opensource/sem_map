@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved. -->
+<CycloneDDS xmlns="https://cdds.io/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+  <Domain Id="any">
+    <General>
+      <Interfaces>
+        <NetworkInterface autodetermine="true" priority="default" multicast="default"/>
+      </Interfaces>
+      <AllowMulticast>false</AllowMulticast>
+      <MaxMessageSize>65500B</MaxMessageSize>
+    </General>
+    <Internal>
+      <!--
+        No hard SocketReceiveBufferSize minimum on purpose. CycloneDDS treats
+        `min` as a requirement and refuses to create a domain when the kernel
+        cannot satisfy it, so requesting 10MB makes every ROS 2 command fail on
+        a stock machine (net.core.rmem_max defaults to ~208kB). Without it,
+        Cyclone takes whatever the OS grants and only warns.
+
+        For high-bandwidth traffic (image and pointcloud topics) raise the
+        kernel limit on the HOST, then restart the container:
+
+            sudo sysctl -w net.core.rmem_max=10485760
+            # persist it:
+            echo 'net.core.rmem_max=10485760' | sudo tee /etc/sysctl.d/60-cyclonedds.conf
+
+        The container shares the host network namespace, so this cannot be set
+        from inside it or via docker's sysctl option.
+      -->
+      <Watermarks>
+        <WhcHigh>500kB</WhcHigh>
+      </Watermarks>
+    </Internal>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>200</MaxAutoParticipantIndex>
+      <Peers>
+        <Peer address="127.0.0.1"/>
+        <!-- Add more peers here -->
+      </Peers>
+    </Discovery>
+  </Domain>
+</CycloneDDS>

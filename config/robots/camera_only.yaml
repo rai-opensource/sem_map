@@ -1,0 +1,56 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# A camera and nothing else.
+#
+# Starting point for running SemMap on any camera that publishes an image and a
+# matching CameraInfo — a webcam, a RealSense, an industrial camera, or a ZED
+# you started yourself. No camera driver is launched for you.
+#
+#   ros2 launch sem_map sem_map_camera.launch.py robot:=camera_only
+#
+# Copy this file, put your own topic names in it, and pass robot:=<your name>.
+# You can also override any of these from the command line; see the launch file.
+#
+# Only the image outputs are produced here (/sem_map/segmentation,
+# /sem_map/traversability, /sem_map/confidence). For the 2.5D map you need a
+# pose and a point cloud as well — see the notes at the bottom.
+/**:
+  ros__parameters:
+    # Topics — change these to match your camera.
+    image_topic: "/camera/color/image_raw"
+    camera_info_topic: "/camera/color/camera_info"
+    image_is_compressed: false
+
+    # Must match what your camera actually publishes, or projection will be
+    # wrong. Check with: ros2 topic echo --once <camera_info_topic>
+    image_width: 1280
+    image_height: 720
+    flip_image: false
+
+    # No pose or point cloud, so no 2.5D map.
+    pose_topic: ""
+    pointcloud_topic: ""
+    enable_height_map: false
+    enable_bev_fusion: false
+
+    # Frames are unused while the map is off.
+    world_frame: ""
+    base_frame: ""
+    pose_frame: ""
+
+    # Which model to run. Swap in your own after training one; see the README.
+    backbone_name: "dinov3s"
+    seg_layer: "dinov3s_sem_seg_snow_v1"
+    # bilinear needs no extra model. "jafar_partial" gives sharper edges at
+    # roughly double the cost, and needs the matching JAFAR file.
+    upsampler_type: "bilinear"
+    upsample_partial_factor: 4
+    traversability_temperature: 0.2
+
+    # Lower these if the GPU cannot keep up with the camera.
+    rgb_processing_rate_hz: 15.0
+    ros_publish_rate_hz: 15.0
+
+    # To add the 2.5D map: set pose_topic and pointcloud_topic above, fill in
+    # the three frames, and set enable_height_map and enable_bev_fusion to true.
+    # The pose must be published faster than the camera frame rate, and its
+    # messages are assumed to be in world_frame.

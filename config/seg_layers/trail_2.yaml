@@ -1,0 +1,28 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+name: "Trail 2 Classes"
+num_classes: 2
+# Source masks are binary {0, 255}; remap to train IDs {0, 1}.
+raw_to_train_id:
+  0: 0
+  1: 1
+  255: 1
+# Minimal binary segmentation for mountain-bike singletrack perception:
+# trail vs. everything else.
+#
+# `traversability` is scored from a mountain-bike rider's perspective:
+#   1.0 = on-line riding surface
+#   0.0 = obstacle or off-limits
+categories:
+  - id: 0
+    name: "background"
+    concept: ""
+    isthing: false
+    color: [0, 100, 0]
+    traversability: 0.0
+
+  - id: 1
+    name: "trail"
+    concept: "trail"
+    isthing: false
+    color: [139, 90, 43]
+    traversability: 1.0
