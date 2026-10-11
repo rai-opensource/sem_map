@@ -1,0 +1,52 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# Model registry: maps logical model names to artifact files.
+#
+# Artifact directories are relative to the sem_map package root. Files are not
+# in git — fetch them with scripts/artifacts/download.sh, or produce them
+# yourself with the export CLIs (see README "Adapting to a new scene").
+#
+#   torch (.pth)  trained linear probe heads       -> needed to export ONNX
+#   onnx  (.onnx) portable graphs with the weights embedded, so they are
+#                 self-contained and platform-agnostic -> published on the Hub
+#   trt   (.plan) TensorRT engines                 -> built locally, never shipped
+#                 (an engine is tied to one GPU architecture + TRT version)
+torch_dir: artifacts/torch
+onnx_dir: artifacts/onnx
+trt_dir: artifacts/trt
+
+families:
+  dinov3s:
+    # DINOv3 ViT-S/16 backbone. Weights are Meta's, under the DINOv3 License
+    # (see MODEL_LICENSES/). Torch loading pulls the gated HF repo
+    # facebook/dinov3-vits16-pretrain-lvd1689m; ONNX/TRT need no HF access.
+    backbone:
+      torch_variant: dinov3s
+      onnx: dinov3s_backbone.onnx
+      trt: dinov3s_backbone.plan
+      patch_size: 16
+      feat_dims: 384
+
+    upsamplers:
+      # Default. No extra model: features are bilinearly upsampled.
+      bilinear: {}
+      # JAFAR learned feature upsampler (Apache-2.0). Sharper boundaries at
+      # roughly double the cost; xN is the upsample factor over patch features.
+      jafar:
+        torch_variant: vit_small_patch16_dinov3.lvd1689m
+        onnx:
+          x2: dinov3s_jafar_x2.onnx
+          x4: dinov3s_jafar_x4.onnx
+          x8: dinov3s_jafar_x8.onnx
+          x16: dinov3s_jafar_x16.onnx
+        trt:
+          x2: dinov3s_jafar_x2.plan
+          x4: dinov3s_jafar_x4.plan
+          x8: dinov3s_jafar_x8.plan
+          x16: dinov3s_jafar_x16.plan
+
+    # Linear segmentation probes. Key = artifact stem (<key>.pth/.onnx/.plan),
+    # value = class definition in config/seg_layers/ (labels + traversability).
+    # Add one line per new scene; see config/seg_layers/template.yaml.
+    seg_layers:
+      dinov3s_sem_seg_snow_v1: coarse_3.yaml     # GrandTour alpine/snow demo
+      dinov3s_sem_seg_trail_v4: trail_2.yaml     # outdoor forest trail

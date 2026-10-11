@@ -1,0 +1,6 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# Demo GIFs are large binaries; do not try to diff or merge them.
+*.gif binary
+
+# Generated/vendored license text, excluded from language statistics.
+MODEL_LICENSES/** linguist-vendored

@@ -1,0 +1,37 @@
+# Jetson AGX Orin (aarch64, JetPack 6 / CUDA 12.6).
+#
+# Everything here is a CUDA-specific wheel that must come from the Jetson index:
+# the PyPI builds for aarch64 are either absent or CPU-only. But pycuda is not
+# published on the Jetson index at all, so PyPI has to stay reachable too — a
+# lone `--index-url` pointing at the Jetson index *replaces* PyPI and makes the
+# file unresolvable.
+#
+# NOTE the ordering below, which is the opposite of pip's: uv gives
+# --extra-index-url entries priority OVER --index-url. So PyPI is the default
+# index and the Jetson index is the "extra" that outranks it. That is what makes
+# torch/torchvision/cuda-python/onnxruntime-gpu resolve to the Jetson aarch64
+# wheels while pycuda still falls back to PyPI. Swapping these two lines makes
+# uv prefer PyPI and the build fails on missing aarch64 wheels.
+#
+# Keep exact pins here. An unpinned package that both indexes carry can
+# otherwise resolve to a PyPI sdist and trigger a multi-hour source build.
+--index-url https://pypi.org/simple
+--extra-index-url https://pypi.jetson-ai-lab.io/jp6/cu126
+
+torch==2.10.0
+torchvision==0.25.0
+
+# CUDA bindings. `cuda.bindings` (used by data_pipeline/) needs cuda-python
+# >=12.6; this pin matches the JetPack 6 CUDA 12.6 runtime.
+cuda-python==12.6.2.post1
+# Hard requirement of the TensorRT runner's CUDA backend
+# (perception/backends/tensorrt.py) — resolved from PyPI, see above.
+pycuda
+
+# CUDA-enabled ONNX Runtime. Plain `onnxruntime` on aarch64 is a CPU-only build
+# with no CUDAExecutionProvider, which would silently drop every ORT path
+# (cli/export_to_onnx.py validation, cli/onnx_benchmark.py) to CPU.
+#
+# Must be >=1.24.0: the Jetson 1.23.0 wheel is built against NumPy 1.x and dies
+# on import with "module compiled using NumPy 1.x cannot be run in NumPy 2.2.6".
+onnxruntime-gpu==1.24.0

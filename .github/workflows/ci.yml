@@ -1,0 +1,122 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+
+# CI is deliberately limited to checks that run on a stock GitHub runner.
+#
+# The container image cannot be built here: it pulls multi-gigabyte CUDA and
+# TensorRT packages and ends up around 28 GB, well past the free runner's disk
+# and time budget. Building the ROS package, running the perception pipeline and
+# the reproduction demo all need an NVIDIA GPU. Those are verified on real
+# hardware before a release.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: pre-commit/action@v3.0.1
+
+  static-checks:
+    name: Static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml==6.0.3
+
+      - name: Byte-compile all Python
+        run: python -m py_compile $(git ls-files '*.py')
+
+      - name: Check shell script syntax
+        run: |
+          status=0
+          for f in $(git ls-files '*.sh'); do
+            bash -n "$f" || { echo "::error file=$f::bash syntax error"; status=1; }
+          done
+          exit $status
+
+      - name: Parse every YAML config
+        run: |
+          python - <<'PY'
+          import sys, yaml
+          from pathlib import Path
+          bad = []
+          for f in sorted(Path("config").rglob("*.yaml")) + [Path("docker-compose.yaml")]:
+              try:
+                  yaml.safe_load(f.read_text())
+              except Exception as exc:
+                  bad.append(f"{f}: {exc}")
+          if bad:
+              print("\n".join(f"::error::{b}" for b in bad))
+              sys.exit(1)
+          print("all YAML parsed")
+          PY
+
+      - name: Validate docker compose profiles
+        run: |
+          for profile in desktop agx; do
+            HOST_USER=ci HOST_UID=1000 HOST_GID=1000 \
+              docker compose --profile "$profile" config >/dev/null
+          done
+
+      - name: Check the model registry resolves to real config files
+        run: |
+          python - <<'PY'
+          import sys, yaml
+          from pathlib import Path
+          cfg = yaml.safe_load(Path("config/models.yaml").read_text())
+          missing = [
+              name
+              for fam in cfg["families"].values()
+              for name, layer in (fam.get("seg_layers") or {}).items()
+              if not (Path("config/seg_layers") / layer).is_file()
+          ]
+          if missing:
+              print("\n".join(f"::error::seg_layer config missing for {m}" for m in missing))
+              sys.exit(1)
+          print("model registry OK")
+          PY
+
+  release-hygiene:
+    name: Release hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No weights, datasets or bags committed
+        run: |
+          hits=$(git ls-files | grep -Ei '\.(onnx|onnx\.data|plan|pth|pt|safetensors|mcap|db3|bag|svo2)$' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::binary artifacts must be release assets, not committed:"
+            echo "$hits"
+            exit 1
+          fi
+
+      - name: No credentials, internal hosts or personal paths
+        run: |
+          pattern='192\.168\.|oauth_token|\.netrc|ghp_[A-Za-z0-9]{20}|gho_[A-Za-z0-9]{20}|hf_[A-Za-z0-9]{30}|/home/[a-z]+/workspaces'
+          hits=$(git grep -InE "$pattern" -- . ':!.github/workflows' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::potential secret or internal reference:"
+            echo "$hits"
+            exit 1
+          fi

@@ -1,0 +1,55 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# Template for a new scene's class definition.
+#
+# A "seg layer" defines what a linear probe predicts and how those classes map
+# to traversability. To add a scene:
+#   1. Copy this file to config/seg_layers/<my_scene>.yaml and edit it.
+#   2. Register the probe in config/models.yaml under
+#      families.dinov3s.seg_layers:  <artifact_stem>: <my_scene>.yaml
+#   3. Train and export the probe (see README, "Adapting to a new scene").
+#   4. Select it at runtime with seg_layer: <artifact_stem>.
+#
+# Keep the class count small. These are linear probes on frozen DINOv3
+# features — 2-5 well-separated classes learn from very few labelled images,
+# while fine-grained taxonomies need far more data for little gain.
+
+name: "My Scene 3 Classes"
+num_classes: 3
+
+# Optional. Only needed when your label masks do not already use train IDs
+# 0..num_classes-1 (e.g. binary masks stored as {0, 255}):
+# raw_to_train_id:
+#   0: 0
+#   255: 1
+
+categories:
+  # id            must be contiguous from 0 and match the training label IDs.
+  # name          short identifier, used in logs and visualisations.
+  # concept       text prompt used by SAM3 auto-labelling; "" disables it for
+  #               this class (typical for background/catch-all classes).
+  # isthing       true for countable objects, false for stuff/surfaces.
+  # color         RGB for the segmentation overlay.
+  # traversability score in [0, 1] this class contributes to the traversability
+  #               map: 1.0 = freely drivable, 0.0 = obstacle. It is robot
+  #               specific — the same segmentation can be re-scored per robot
+  #               by pointing at a different seg layer with the same classes.
+  - id: 0
+    name: "background"
+    concept: ""
+    isthing: false
+    color: [180, 180, 190]
+    traversability: 0.0
+
+  - id: 1
+    name: "floor_trav"
+    concept: "walkable ground"
+    isthing: false
+    color: [144, 238, 144]
+    traversability: 1.0
+
+  - id: 2
+    name: "obstacle"
+    concept: "obstacle"
+    isthing: true
+    color: [255, 150, 150]
+    traversability: 0.0

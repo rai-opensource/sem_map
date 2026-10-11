@@ -1,0 +1,160 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+/build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# These are all directories at the repository root. The leading slash matters:
+# without it, "artifacts/" would also match scripts/artifacts/ and silently drop
+# the model download and upload scripts from git.
+
+# Model artifacts: fetched with scripts/artifacts/download.sh, never committed
+/artifacts/
+
+# Scratch space for internal documents that must not reach a public repo
+/untracked/
+
+# Datasets: downloaded, see docs/GRANDTOUR.md. The directory itself is kept in
+# git so docker compose's ./data bind mount does not create it as root.
+/data/*
+!/data/.gitkeep
+*.mcap
+*.db3
+*.bag
+*.svo2
+
+# Colcon output
+/install/
+/log/
+
+# Recorded bags, training runs and pipeline outputs
+/recordings/
+/outputs/
+scripts/sem_map/training/runs/
+scripts/sem_map/training/eval_results/
+
+# Optional JAFAR clone (see JAFAR_ROOT in the README)
+/external/
+
+.vscode/
+.idea/
+.bash_history

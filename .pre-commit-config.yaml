@@ -1,0 +1,103 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+
+default_stages: [pre-commit]
+default_install_hook_types: [pre-commit]
+
+fail_fast: false
+
+# Model artifacts, datasets and recorded bags never belong in a commit; they are
+# published on the Hugging Face Hub and fetched by scripts/artifacts/download.sh.
+# Vendored licence texts are excluded too: they are reproduced verbatim from
+# upstream and must not be reformatted, not even to fix trailing whitespace.
+exclude: '^(artifacts/|data/|recordings/|images/.*\.gif$|licenses/|MODEL_LICENSES/|NOTICE$)'
+
+repos:
+  # standard pre-commit hooks for common checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # check for files > 1Mb on commit (ignores git-lfs tracked files)
+      - id: check-added-large-files
+        args: ["--enforce-all", "--maxkb", "1024"]
+      # detect any unresolved merge conflicts remaining in files
+      - id: check-merge-conflict
+      # check that executable files have shebangs
+      - id: check-shebang-scripts-are-executable
+      # check for broken symlinks that shouldn't be checked in
+      - id: check-symlinks
+      # check toml files, pretty much only used for pyproject files
+      - id: check-toml
+      # attempt to parse/load yaml files to verify they don't have obvious issues
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      # fix end of file inconsistencies caused by different editors
+      - id: end-of-file-fixer
+      # fix trailing whitespace in files of all types
+      - id: trailing-whitespace
+      # block committing private keys
+      - id: detect-private-key
+
+  # check (or insert) new license headers on standard file extensions we use
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: insert-license
+        files: (\.cpp|\.cc|\.c|\.hpp|\.h)$
+        args:
+          [
+            --comment-style,
+            "//",
+            --license-filepath,
+            .copyright.txt,
+            --allow-past-years,
+            --use-current-year,
+            --no-extra-eol,
+          ]
+      - id: insert-license
+        files: (\.sh|\.bash|\.py|CMakeLists\.txt|\.cmake|\.cmake\.in|\.yaml|\.yml|\.toml)$
+        # The pinned requirement lists carry upstream provenance rather than
+        # ours. tools/ is our own work (see NOTICE) and is checked.
+        exclude: '^docker/requirements/'
+        args:
+          [
+            --license-filepath,
+            .copyright.txt,
+            --allow-past-years,
+            --use-current-year,
+            --no-extra-eol,
+          ]
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: [--fix] # apply simple fixes (and report as failure)
+        # Vendored verbatim from Meta; must not be reformatted.
+        exclude: '^MODEL_LICENSES/'
+
+  # Lint only, and deliberately without --fix: ruff's autofix would strip
+  # imports that exist for their side effects (pycuda.autoinit, which
+  # initialises CUDA) and the re-exports in perception/__init__.py that form the
+  # package's public API. See .ruff.toml for the narrow rule set and why.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.4
+    hooks:
+      - id: ruff
+
+  # clang-format is enforced: the one-off reformat has already landed in its own
+  # commit, so there is no longer a reformat waiting to bury anything.
+  #
+  # ruff-format stays manual, to keep the Python diffable against the version the
+  # paper was written from. Run it deliberately:
+  #     pre-commit run --hook-stage manual --all-files ruff-format
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.4
+    hooks:
+      - id: ruff-format
+        stages: [manual]
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.7
+    hooks:
+      - id: clang-format
+        types_or: [c++, c]

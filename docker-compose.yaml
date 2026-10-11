@@ -1,0 +1,201 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+# sem_map — development / runtime containers
+# =============================================================================
+#
+# Two profiles, one file:
+#
+#   desktop   x86_64 workstation with a discrete NVIDIA GPU (CUDA 12.8)
+#   agx       NVIDIA Jetson AGX Orin, JetPack 6 / L4T r36.4
+#
+# Quick start (desktop):
+#
+#   cp .env.example .env          # optional, see "Environment" below
+#   xhost +local:docker           # once per login, for RViz windows
+#   docker compose --profile desktop build
+#   docker compose --profile desktop up -d
+#   docker compose --profile desktop exec sem_map-desktop bash
+#
+# Substitute `agx` for `desktop` on a Jetson. The container stays up running
+# `sleep infinity`, so you can open as many `exec` shells as you like; it is a
+# long-lived dev box rather than a one-shot job.
+#
+# -----------------------------------------------------------------------------
+# Environment
+# -----------------------------------------------------------------------------
+# The image contains a non-root user `dev` at UID/GID 1000:1000, and runs as it.
+# Bind-mount ownership is numeric — the host only ever sees UIDs and GIDs — so
+# files written inside the container (build output, rosbags, checkpoints) come out
+# owned by you on the host whenever your host user is 1000:1000, which is the
+# first user on a single-user Linux install. Nothing to configure.
+#
+# If your host user is NOT 1000:1000, pass the numbers at BUILD time (they are
+# baked into the image, not read at runtime):
+#
+#   docker compose --profile desktop build \
+#       --build-arg HOST_UID=$(id -u) --build-arg HOST_GID=$(id -g)
+#
+# Optional settings, in your shell or a `.env` file next to this one:
+#
+#   SEM_MAP_DATA=/mnt/bigdisk/sem_map_data   # optional, see mounts below
+#   INSTALL_ZED=false                        # optional, see build args below
+#   TRT_PIN_VERSION=10.8.0.*                 # optional, see build args below
+#   SEM_MAP_HF_CACHE=/mnt/hf                 # optional, see mounts below
+#
+# If a host device group GID differs from the container's (a stock Ubuntu host
+# uses render=104 where this base image uses 108), add the host's numeric GID
+# here with `group_add: ["104"]`. The agx profile is privileged and bind-mounts
+# /dev, so it does not need this.
+#
+# `${PWD}` is used to bind the repository at the *same absolute path* inside the
+# container as on the host. That is deliberate: relative symlinks and any
+# absolute paths baked into configs, ONNX/TensorRT artifact caches or rosbag
+# metadata then resolve identically in both worlds. Run `docker compose` from
+# the repository root so `${PWD}` points at the repo.
+
+# Settings shared by both platforms. YAML anchors keep the two services honest
+# about staying in sync.
+x-sem-map-common: &sem-map-common
+  # Keep the container alive so `docker compose exec` can attach shells to it.
+  command: ["sleep", "infinity"]
+  stdin_open: true
+  tty: true
+  restart: unless-stopped
+
+  # ROS2 discovery and CUDA IPC both need the host's namespaces:
+  #   network_mode: host  — DDS multicast discovery to nodes outside the
+  #                         container (and to other machines on the LAN)
+  #   ipc: host           — the perception pipeline hands GPU buffers between
+  #                         processes via CUDA IPC handles, which requires a
+  #                         shared IPC namespace (this also removes the 64 MB
+  #                         default /dev/shm limit)
+  #   pid: host           — CUDA IPC handle validation resolves peer PIDs, and
+  #                         it makes host-side profiling (nsys, jtop) work
+  network_mode: host
+  ipc: host
+  pid: host
+
+  # Realtime scheduling and unlimited page locking, matching what the ROS2
+  # sensor pipeline expects. Without memlock=-1, CUDA pinned-host allocations
+  # start failing under load.
+  ulimits:
+    rtprio: 99
+    memlock:
+      soft: -1
+      hard: -1
+
+  # Start every shell in the repository. This is part of the container's config
+  # rather than something the entrypoint does, because `docker exec` does not run
+  # the entrypoint but does honour the configured working directory — so
+  # `docker compose exec ... bash` lands in the repo too.
+  working_dir: "${PWD}"
+
+  environment:
+    # Repo location inside the container == location on the host.
+    WORKSPACE_DIR: "${PWD}"
+    # X11 forwarding for RViz2 and the Streamlit/Textual tools.
+    # Run `xhost +local:docker` on the host once per login session.
+    DISPLAY: "${DISPLAY:-:0}"
+    QT_X11_NO_MITSHM: "1"
+    NVIDIA_VISIBLE_DEVICES: all
+    NVIDIA_DRIVER_CAPABILITIES: all
+    # Hugging Face cache and token, from the bind mount below.
+    HF_HOME: /hf-cache
+
+  volumes:
+    # The repository, at the same absolute path as on the host (see note above).
+    - "${PWD}:${PWD}"
+    # Datasets and model checkpoints. Defaults to ./data in the repo; point
+    # SEM_MAP_DATA at an external disk if your rosbags live elsewhere.
+    - "${SEM_MAP_DATA:-./data}:/data"
+    # X11 socket for GUI tools.
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    # Match host time so rosbag timestamps and log lines line up.
+    - /etc/localtime:/etc/localtime:ro
+    # Hugging Face cache and token, shared with the host so a host `hf auth
+    # login` works in here too, and keeps working: OAuth tokens are refreshed
+    # in place, which an env var or a read-only mount cannot do. Docker creates
+    # this path root-owned if it is missing, so log in on the host first.
+    - "${SEM_MAP_HF_CACHE:-${HOME}/.cache/huggingface}:/hf-cache"
+
+services:
+  # ---------------------------------------------------------------------------
+  # Desktop: x86_64 + discrete NVIDIA GPU
+  # ---------------------------------------------------------------------------
+  sem_map-desktop:
+    <<: *sem-map-common
+    profiles: ["desktop"]
+    image: sem_map:desktop
+    container_name: sem_map_desktop
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        PLATFORM: desktop
+        # The Stereolabs ZED SDK is a large optional download and is only
+        # needed to talk to a ZED camera live; replaying recorded data does
+        # not need it. Enable with INSTALL_ZED=true in your .env or shell.
+        INSTALL_ZED: "${INSTALL_ZED:-false}"
+        # UID/GID of the container user, baked into the image. Defaults suit a
+        # single-user Linux host; see "Environment" above if yours differs.
+        HOST_UID: "${HOST_UID:-1000}"
+        HOST_GID: "${HOST_GID:-1000}"
+        # TensorRT pin; 10.8.0 is the Blackwell (sm_120) floor. The agx build
+        # installs a JetPack-matched version and ignores this.
+        TRT_PIN_VERSION: "${TRT_PIN_VERSION:-10.8.0.*}"
+
+    # On desktop, GPUs are requested through the standard Compose device
+    # reservation, which the NVIDIA Container Toolkit fulfils. `video` is
+    # included for NVDEC/NVENC (rosbag video decode) and `compute`/`utility`
+    # for CUDA and nvidia-smi.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility, video]
+
+  # ---------------------------------------------------------------------------
+  # AGX: NVIDIA Jetson AGX Orin
+  # ---------------------------------------------------------------------------
+  sem_map-agx:
+    <<: *sem-map-common
+    profiles: ["agx"]
+    image: sem_map:agx
+    container_name: sem_map_agx
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        PLATFORM: agx
+        INSTALL_ZED: "${INSTALL_ZED:-false}"
+        HOST_UID: "${HOST_UID:-1000}"
+        HOST_GID: "${HOST_GID:-1000}"
+
+    # Jetson uses the `nvidia` container runtime rather than Compose device
+    # reservations. On L4T the GPU is not a discrete PCIe device the toolkit can
+    # enumerate; the runtime instead injects the integrated GPU, the CSI camera
+    # stack and the NVIDIA userspace libraries from the host. Using `deploy:`
+    # here fails with "could not select device driver".
+    runtime: nvidia
+
+    # Jetson peripherals — CSI/GMSL cameras, USB devices, IMUs, the jtop socket
+    # — are reached through /dev and generally need privileged access. This is
+    # broad; it is the pragmatic setting for an on-robot dev container, and it
+    # is deliberately NOT enabled on the desktop profile.
+    privileged: true
+
+    volumes:
+      # Re-listed rather than merged: YAML anchors replace list keys wholesale,
+      # so the shared mounts must be repeated here alongside the extras.
+      - "${PWD}:${PWD}"
+      - "${SEM_MAP_DATA:-./data}:/data"
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /etc/localtime:/etc/localtime:ro
+      - "${SEM_MAP_HF_CACHE:-${HOME}/.cache/huggingface}:/hf-cache"
+      # Full device access for cameras, USB and serial peripherals.
+      - /dev:/dev
+      # jtop (jetson-stats) telemetry socket. Uncomment only if the jtop
+      # service is running on the host — Docker silently creates a root-owned
+      # *directory* at this path if the socket does not exist.
+      # - /run/jtop.sock:/run/jtop.sock

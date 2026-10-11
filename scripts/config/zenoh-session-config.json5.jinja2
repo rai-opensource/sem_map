@@ -1,0 +1,219 @@
+/// File modified.
+/// Modifications Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+/// Adapted from https://github.com/ros2/rmw_zenoh/blob/humble/rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_SESSION_CONFIG.json5
+/// Licensed under the Apache License, Version 2.0. See the NOTICE file and
+/// licenses/Apache-2.0.txt.
+/// All values that are modified from the default ROS2 configuration are marked by comments starting with CHANGED
+/// Some default ros2 values are commented for clarity
+{
+  /// DEFAULT
+  /// This is either "peer" or "client". In the client configuration, all
+  /// messages are routed through the zenoh router, which incurs latency and
+  /// extra bandwidth. In peer, discovery happens through the router, but
+  /// messages are sent directly peer to peer.
+  mode: "peer",
+  connect: {
+    timeout_ms: { router: -1, peer: -1, client: 0 },
+    endpoints: [
+      /// CHANGED
+      /// Set it to connect to the known router IP
+      /// This tells zenoh sessions (ros2 nodes) to connect to a specific
+      /// router. This router should live on localhost if it's a single machine,
+      /// or on at most computer in a multi machine setup.
+      "tcp/{{ router_ip }}:7447",
+    ],
+    exit_on_failure: { router: false, peer: false, client: true },
+    retry: {
+      period_init_ms: 1000,
+      period_max_ms: 4000,
+      period_increase_factor: 2,
+    },
+  },
+  listen: {
+    timeout_ms: 0,
+    endpoints: [
+      /// CHANGED
+      /// Allow connections from any host. This is required for the
+      /// multi-machine setup and allows a peer to receive connections from any
+      /// other machine.
+      "tcp/0.0.0.0:0"
+    ],
+    exit_on_failure: true,
+    retry: {
+      period_init_ms: 1000,
+      period_max_ms: 4000,
+      period_increase_factor: 2,
+    },
+  },
+  open: {
+    return_conditions: {
+      connect_scouted: true,
+      declares: true,
+    },
+  },
+  scouting: {
+    timeout: 3000,
+    delay: 500,
+    multicast: {
+      /// DEFAULT
+      /// Multicast is disabled by default
+      enabled: false,
+      address: "224.0.0.224:7446",
+      interface: "auto",
+      ttl: 1,
+      autoconnect: { router: [], peer: ["router", "peer"], client: ["router"] },
+      autoconnect_strategy: { peer: { to_router: "always", to_peer: "greater-zid" } },
+      listen: true,
+    },
+    gossip: {
+      enabled: true,
+      multihop: false,
+      target: { router: ["router", "peer"], peer: ["router"]},
+      autoconnect: { router: [], peer: ["router", "peer"] },
+      autoconnect_strategy: { peer: { to_router: "always", to_peer: "greater-zid" } },
+    },
+  },
+  timestamping: {
+    enabled: { router: true, peer: true, client: true },
+    drop_future_timestamp: false,
+  },
+  queries_default_timeout: 600000,
+  routing: {
+    router: {
+      peers_failover_brokering: true,
+      linkstate: {
+      },
+    },
+    peer: {
+      mode: "peer_to_peer",
+      linkstate: {
+      },
+    },
+    interests: {
+      timeout: 10000,
+    },
+  },
+  transport: {
+    unicast: {
+      open_timeout: 60000,
+      accept_timeout: 60000,
+      accept_pending: 10000,
+      max_sessions: 10000,
+      max_links: 1,
+      lowlatency: false,
+      qos: {
+        enabled: true,
+      },
+      compression: {
+        enabled: false,
+      },
+    },
+    multicast: {
+      join_interval: 2500,
+      max_sessions: 1000,
+      qos: {
+        enabled: false,
+      },
+      compression: {
+        enabled: false,
+      },
+    },
+    link: {
+      tx: {
+        sequence_number_resolution: "32bit",
+        lease: 60000,
+        keep_alive: 2,
+        batch_size: 65535,
+        queue: {
+          size: {
+            control: 2,
+            real_time: 2,
+            interactive_high: 2,
+            interactive_low: 2,
+            data_high: 2,
+            data: 2,
+            data_low: 2,
+            background: 2,
+          },
+          congestion_control: {
+            drop: {
+              wait_before_drop: 1000,
+              max_wait_before_drop_fragments: 50000,
+            },
+            block: {
+              wait_before_close: 60000000,
+            },
+          },
+          batching: {
+            enabled: true,
+            time_limit: 1,
+          },
+          allocation: {
+            mode: "lazy",
+          },
+        },
+      },
+      rx: {
+        buffer_size: 65535,
+        max_message_size: 1073741824,
+      },
+      tls: {
+        root_ca_certificate: null,
+        listen_private_key: null,
+        listen_certificate: null,
+        enable_mtls: false,
+        connect_private_key: null,
+        connect_certificate: null,
+        verify_name_on_connect: true,
+        close_link_on_expiration: false,
+      },
+    },
+    shared_memory: {
+      /// CHANGED
+      /// Enable shared memory on the same host to ensure that local
+      /// connections sending large messages have low overhead.
+      enabled: true,
+      /// CHANGED
+      /// Initializes shared memory internals at startup rather than first shm
+      /// buffer usage.
+      mode: "init",
+      transport_optimization: {
+          enabled: true,
+          /// CHANGED
+          /// Use a 48 MB (48 * 1024 * 1024) pool to allow headroom for
+          /// sending a lot of large messages like point clouds and images
+          pool_size: 50331648,
+          /// DEFAULT
+          /// A zenoh message passing over shared memory involves sending a UDP
+          /// packet with the bookkeeping information about the shared memory
+          /// buffer. For small messages, especially ones that fit in a single
+          /// loopback UDP packet, shared memory is actually slower due to the
+          /// UDP overhead. That's why it's good to leave small messages
+          /// sending over UDP
+          message_size_threshold: 3072,
+      },
+    },
+    auth: {
+      usrpwd: {
+        user: null,
+        password: null,
+        dictionary_file: null,
+      },
+      pubkey: {
+        public_key_pem: null,
+        private_key_pem: null,
+        public_key_file: null,
+        private_key_file: null,
+        key_size: null,
+        known_keys_file: null,
+      },
+    },
+  },
+  adminspace: {
+    enabled: true,
+    permissions: {
+      read: true,
+      write: false,
+    },
+  },
+}

@@ -1,0 +1,75 @@
+# Copyright (c) 2026 Robotics and AI Institute LLC dba RAI Institute. All rights reserved.
+
+# This package is normally built by colcon/ament_cmake as a ROS 2 package; see
+# the README. This file exists so the Python half (the perception pipeline and
+# the scene-adaptation CLIs) can also be installed on its own with
+# `pip install -e .`, and to keep tooling configuration in one place.
+#
+# The GPU stack (torch, cupy, onnxruntime-gpu, tensorrt, pycuda, cuda-python) is
+# platform specific and is installed from docker/requirements/ with the correct
+# index for x86 or Jetson. Installing the extras below from plain PyPI will not
+# give you a CUDA-enabled build.
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sem_map"
+version = "0.1.0"
+description = "Real-time semantic mapping for mobile robots"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Deepana Ishtaweera", email = "dishtaweera@rai-inst.com" }]
+keywords = ["robotics", "semantic-mapping", "traversability", "ros2", "dinov3"]
+classifiers = [
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# Keep the core runtime light; heavy stacks live in the extras below.
+dependencies = ["numpy", "PyYAML", "Pillow"]
+
+[project.optional-dependencies]
+pytorch = ["torch", "torchvision", "torchmetrics", "numpy>=2.0.0"]
+
+# Training a probe and exporting it to ONNX.
+vit = [
+    "einops",
+    "timm", # required by the optional JAFAR torch backend, not imported directly
+    "transformers",
+    "scikit-learn",
+    "matplotlib",
+    "rich",
+    "tqdm",
+    "onnx",
+    "onnxruntime-gpu",
+    "onnxscript",
+    "pybind11",
+]
+
+# Scene-adaptation tooling: dataset selection, SAM3 labelling, the TUIs.
+tools = [
+    "faiss-cpu",
+    "textual",
+    "streamlit",
+    "streamlit-image-coordinates",
+    "mcap",
+    "mcap-ros2-support",
+    "opencv-python",
+    "openai",     # optional vision-LLM class filter
+    "hydra-core", # only for the optional JAFAR PyTorch backend
+]
+
+[project.urls]
+Repository = "https://github.com/rai-opensource/sem_map"
+
+[tool.setuptools.packages.find]
+where = ["scripts"]
+include = ["sem_map*"]
+
+[tool.pytest.ini_options]
+testpaths = ["scripts/sem_map/tests"]
+python_files = ["test_*.py"]

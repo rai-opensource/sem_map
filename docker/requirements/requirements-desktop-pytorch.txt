@@ -1,0 +1,26 @@
+# x86_64 workstation with a discrete NVIDIA GPU (CUDA 12.8).
+#
+# CUDA-specific wheels only. Everything platform-neutral lives in
+# requirements-common.txt, which both platforms share.
+#
+# The PyTorch index carries torch and friends but not the rest of the CUDA
+# stack, so PyPI stays reachable as the default index. Note the ordering, which
+# is the opposite of pip's: uv gives --extra-index-url priority OVER
+# --index-url, so the PyTorch index must be the "extra" to win for torch.
+#
+# cu128, not cu126: Blackwell (sm_120) needs CUDA 12.8, and the cu126 wheels
+# carry no sm_120 kernels. This raises the floor too — cu128 starts at sm_70,
+# dropping Maxwell and Pascal.
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+torch==2.9.1
+torchvision
+
+# CUDA bindings. `cuda.bindings` (used by data_pipeline/) needs cuda-python >=12.6.
+cuda-python==13.0.3
+# Hard requirement of the TensorRT runner's CUDA backend
+# (perception/backends/tensorrt.py).
+pycuda==2025.1.2
+
+onnxruntime-gpu==1.23.0
